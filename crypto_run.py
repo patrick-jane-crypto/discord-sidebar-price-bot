@@ -31,6 +31,14 @@ def resolve_ambiguous_ticker(ticker: str) -> str:
         return 'DexTools'
     elif ticker == 'NOIA':
         return 'NOIA Network'
+    elif ticker == 'SGB':
+        return 'songbird'
+    elif ticker == "OHM":
+        return 'olympus'
+    elif ticker == "TIME":
+        return 'wonderland'
+    elif ticker == "KLIMA-DAO":
+        return "klima-dao"
     else:
         return ticker
 
@@ -47,7 +55,8 @@ def get_price(id_: str,
         r = requests.get('https://api.coingecko.com/api/v3/simple/price',
                          params={'ids': id_,
                                  'vs_currencies': ','.join(unitList).lower(), # doesn't need to be in lowercase but just in case
-                                 'include_24hr_change': 'true'})
+                                 'include_24hr_change': 'true',
+                                 'include_market_cap': 'true'})
         if r.status_code == 200:
             if verbose:
                 print('200 OK')
@@ -58,11 +67,12 @@ def get_price(id_: str,
             time.sleep(10)
 
 def main(ticker: str,
-         verbose: bool = False) -> None:
+         verbose: bool = False,
+         marketcap: bool = False) -> None:
     import json, yaml
     import discord
     import asyncio
-
+    from millify import millify
     # 1. Load config
     filename = 'crypto_config.yaml'
     with open(filename) as f:
@@ -100,7 +110,10 @@ def main(ticker: str,
         pct_change = priceList[f'{unit}_24h_change']
 
         nickname = f'{ticker.upper()} {get_currencySymbol(unit)}{price_now}'
-        status = f'{get_currencySymbol(unit)} 24h: {pct_change:.2f}%'
+        if marketcap:
+            status = f'MCAP: {millify(priceList["usd_market_cap"], precision=2)}'
+        else:
+            status = f'{get_currencySymbol(unit)} 24h: {pct_change:.2f}%'
         await client.get_guild(config['guildId']).me.edit(nick=nickname)
         await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching,
                                                                name=status))
@@ -133,6 +146,10 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose',
                         action='store_true', # default is False
                         help='toggle verbose')
+    parser.add_argument('-m', '--marketcap',
+                        action='store_true', # default is False
+                        help='use marketcap as status')
     args = parser.parse_args()
     main(ticker=args.ticker,
-         verbose=args.verbose)
+         verbose=args.verbose,
+         marketcap=args.marketcap)
